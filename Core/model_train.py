@@ -202,32 +202,32 @@ def model_eval(model_path: str, data_loader, device='cuda'):
     return mse_per_step, mae_per_step, r2_per_step, rmse_per_step, all_outputs, all_targets
 
 if __name__ == '__main__':
-    # df = pd.DataFrame()
-    # # 常规训练
-    # df['normal_epochs_loss'] = model_train(train_data_loader, save_path=os.path.join(out_model_dir, 'normal_model.pth'))
-    # print('>>> 常规训练结束')
-    # # 特征重要性训练
-    # # 动态特征
-    # for feature_ix in range(6):
-    #     train_dataset = H5DatasetDecoder(train_path, shuffle_feature_ix=feature_ix, dynamic=True)  # 创建自定义数据集实例
-    #     train_data_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    #
-    #     cur_feature_name = dynamic_features_name[feature_ix]
-    #     save_path = os.path.join(out_model_dir, cur_feature_name + '_model.pth')
-    #     df[cur_feature_name + '_epochs_loss'] = \
-    #         model_train(train_data_loader, feature_ix, dynamic=True, save_path=save_path)
-    #     print('>>> {}乱序排列 训练结束'.format(cur_feature_name))
-    # # 静态特征
-    # for feature_ix in range(2):
-    #     train_dataset = H5DatasetDecoder(train_path, shuffle_feature_ix=feature_ix, dynamic=False)  # 创建自定义数据集实例
-    #     train_data_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    #
-    #     cur_feature_name = static_feature_name[feature_ix]
-    #     save_path = os.path.join(out_model_dir, cur_feature_name + '_model.pth')
-    #     df[cur_feature_name + '_epochs_loss'] = \
-    #         model_train(train_data_loader, feature_ix, dynamic=False, save_path=save_path)
-    #     print('>>> {}乱序排列 训练结束'.format(cur_feature_name))
-    # df.to_excel(r'E:\Models\training_eval_results\training_loss.xlsx')
+    df = pd.DataFrame()
+    # 常规训练
+    df['normal_epochs_loss'] = model_train(train_data_loader, save_path=os.path.join(out_model_dir, 'normal_model.pth'))
+    print('>>> 常规训练结束')
+    # 特征重要性训练
+    # 动态特征
+    for feature_ix in range(6):
+        train_dataset = H5DatasetDecoder(train_path, shuffle_feature_ix=feature_ix, dynamic=True)  # 创建自定义数据集实例
+        train_data_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+
+        cur_feature_name = dynamic_features_name[feature_ix]
+        save_path = os.path.join(out_model_dir, cur_feature_name + '_model.pth')
+        df[cur_feature_name + '_epochs_loss'] = \
+            model_train(train_data_loader, feature_ix, dynamic=True, save_path=save_path)
+        print('>>> {}乱序排列 训练结束'.format(cur_feature_name))
+    # 静态特征
+    for feature_ix in range(2):
+        train_dataset = H5DatasetDecoder(train_path, shuffle_feature_ix=feature_ix, dynamic=False)  # 创建自定义数据集实例
+        train_data_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+
+        cur_feature_name = static_feature_name[feature_ix]
+        save_path = os.path.join(out_model_dir, cur_feature_name + '_model.pth')
+        df[cur_feature_name + '_epochs_loss'] = \
+            model_train(train_data_loader, feature_ix, dynamic=False, save_path=save_path)
+        print('>>> {}乱序排列 训练结束'.format(cur_feature_name))
+    df.to_excel(r'E:\Models\training_eval_results\training_loss.xlsx')
 
     # 评估
     indicator_whole = pd.DataFrame()
@@ -253,7 +253,7 @@ if __name__ == '__main__':
         outputs_targets.to_excel(r'E:\Models\training_eval_results\{}_outputs_targets.xlsx'.format(cur_model_name))
         print('>>> {} 重要性评估完毕'.format(cur_model_name))
     indicator.loc['均值指标'] = np.mean(indicator, axis=0)
-    indicator.to_excel(r'E:\Models\training_eval_results\eval_indicators_整体.xlsx')
+    indicator.to_excel(r'E:\Models\training_eval_results\eval_indicators.xlsx')
     indicator_whole.to_excel(r'E:\Models\training_eval_results\eval_indicators_整体.xlsx')
     # model.eval()
     # eval_loss = []

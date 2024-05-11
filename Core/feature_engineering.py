@@ -31,6 +31,7 @@ import os
 import re
 from glob import glob
 
+import netCDF4 as nc
 import numpy as np
 from osgeo import gdal
 import h5py
@@ -57,6 +58,7 @@ in_dir = r'E:\FeaturesTargets\uniform'
 h5_path = r'E:\FeaturesTargets\features_targets.h5'
 dem_path = r'E:\FeaturesTargets\uniform\dem.tiff'
 slope_path = r'E:\FeaturesTargets\uniform\slope.tif'
+Rs_path = r'H:\Datasets\Objects\Veg\GWRHXG_Rs1.nc'
 start_date = datetime(2003, 1, 1)
 end_date = datetime(2019, 12, 1)
 features1_params = {
@@ -71,6 +73,7 @@ features1_params = {
 rows = 132
 cols = 193
 features1_size = len(features1_params)
+
 
 # 特征处理和写入
 h5 = h5py.File(h5_path, mode='w')
@@ -123,12 +126,13 @@ h5 = None
 
 # 进一步处理，混合所有年份的数据(无需分组)
 with h5py.File(h5_path, mode='a') as h5:
+    year_dem = h5['dem']
+    year_slope = h5['slope']
     for year in range(2003, 2020):
-        year_features1 = h5[r'2003/features1']
+        year_features1 = h5[r'{}/features1'.format(year)]  # 这里导致的重大错误: year_features1 = h5[r'2003/features1']
         # year_features2 = h5[r'2003/features2']
-        year_targets = h5[r'2003/targets']
-        year_dem = h5['dem']
-        year_slope = h5['slope']
+        year_targets = h5[r'{}/targets'.format(year)]  # Here too
+
         mask = np.all(~np.isnan(year_features1), axis=(0, 2)) & \
                ~np.isnan(year_slope) & \
                np.all(~np.isnan(year_targets), axis=0) & \
@@ -155,14 +159,14 @@ with h5py.File(h5_path, mode='a') as h5:
     sample_size = dem.shape[0]
     train_amount = int(sample_size * 0.8)
     eval_amount = sample_size - train_amount
-    # 创建数据集并存储训练数据
+# 创建数据集并存储训练数据
 with h5py.File(r'E:\FeaturesTargets\train.h5', mode='w') as h5:
     h5.create_dataset('dynamic_features', data=features1[:, :train_amount, :])
     h5.create_dataset('static_features1', data=slope[:train_amount])  # 静态变量
     h5.create_dataset('static_features2', data=dem[:train_amount])  # 静态变量
     h5.create_dataset('targets', data=targets[:, :train_amount])
 with h5py.File(r'E:\FeaturesTargets\eval.h5', mode='w') as h5:
-    # # # 创建数据集并存储评估数据
+# # # 创建数据集并存储评估数据
     h5.create_dataset('dynamic_features', data=features1[:, train_amount:, :])
     h5.create_dataset('static_features1', data=slope[train_amount:])  # 静态变量
     h5.create_dataset('static_features2', data=dem[train_amount:])  # 静态变量

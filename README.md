@@ -164,3 +164,8 @@ pip install -r I:\PyProJect\Veg\VEG\requirements.txt
 
 ## uniform_datasets.py, feature_engineering.py调整
 
+# 2024年05月09日处理
+
+处理Rs地表太阳辐射数据, 主要是各个月份的影像nc转tiff,顺便做了一下掩膜、裁剪和重采样
+并输出了lon和lat数据集为tiff文件, 方便后续作为变量输入到模型中
+

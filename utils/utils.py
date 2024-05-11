@@ -59,7 +59,7 @@ class H5DatasetDecoder(Dataset):
         dynamic_feature = self.dynamic_features[:, index, :]
         static_features1 = self.static_features1[index]
         static_features2 = self.static_features2[index]
-        target = self.targets[:, index]
+        target = self                .targets[:, index]
 
         static_feature = (static_features1, static_features2)
         return torch.tensor(dynamic_feature, dtype=torch.float32), \

@@ -102,19 +102,21 @@ class LSTMModel(nn.Module):
         self.causal_conv1d = nn.Conv1d(input_size, 128, 5)
         self.fc1 = nn.Linear(2, 128)
         self.rnn = nn.LSTM(128, hidden_size, num_layers, batch_first=True)
-        self.fc2 = nn.Linear(hidden_size, output_size)
+        self.fc2 = nn.Linear(384, output_size)
 
     def forward(self, dynamic_x, static_x):
         # 因果卷积
-        conv1d_out = self.causal_conv1d(F.pad(torch.transpose(dynamic_x, 1, 2), (2, 0)))
+        conv1d_out = (self.causal_conv1d(F.pad(torch.transpose(dynamic_x, 1, 2), (2, 0))))
+        # conv1d_out = self.causal_conv1d(F.pad(torch.transpose(dynamic_x, 1, 2), (2, 0)))
         # conv1d_out = self.causal_conv1d(torch.transpose(dynamic_x, 1, 2))
         # LSTM层
         lstm_out, _ = self.rnn(torch.transpose(conv1d_out, 1, 2))
         # 只使用最后一个时间步的输出
         lstm_out = lstm_out[:, -1, :]  # (-1, 256)
         static_out = self.fc1(static_x)  # (-1, 2) ==> (-1, 128)
+        # static_out = self.fc1(static_x)  # (-1, 2) ==> (-1, 128)
         merged_out = torch.cat([lstm_out, static_out], dim=1)  # (-1, 256 + 128)
         # 全连接层
-        out = self.fc2(lstm_out)  # (-1, 12)
+        out = self.fc2(merged_out)  # (-1, 12)
 
         return out
