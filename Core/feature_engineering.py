@@ -24,6 +24,9 @@ dem: single
     - features2 -> (None, ), Landuse, (184 * 139)
     - targets-> (Noner, time_step), NDVI, (184 * 139, 12)
 - features3 -> dem
+
+2024/5/11 新增关于Rs地表太阳辐射和经纬度数据集的添加
+由于Rs时间范围为1983-2017年6月份, 因此此处公共部分的使用日期缩短到2016年12月份.
 """
 
 from datetime import datetime
@@ -58,9 +61,10 @@ in_dir = r'E:\FeaturesTargets\uniform'
 h5_path = r'E:\FeaturesTargets\features_targets.h5'
 dem_path = r'E:\FeaturesTargets\uniform\dem.tiff'
 slope_path = r'E:\FeaturesTargets\uniform\slope.tif'
-Rs_path = r'H:\Datasets\Objects\Veg\GWRHXG_Rs1.nc'
+lon_path = r'E:\FeaturesTargets\uniform\Lat.tiff'
+lat_path = r'E:\FeaturesTargets\uniform\Lat.tiff'
 start_date = datetime(2003, 1, 1)
-end_date = datetime(2019, 12, 1)
+end_date = datetime(2016, 12, 1)
 features1_params = {
     'LST_MAX': 'LST_MAX_',
     # 'LST_MIN': 'LST_MIN_',
@@ -69,7 +73,9 @@ features1_params = {
     'ET': 'GLDAS_ET_',
     'Qs': 'GLDAS_Qs_',
     'Qsb': 'GLDAS_Qsb_',
-    'TWSC': 'GLDAS_TWSC_'}
+    'TWSC': 'GLDAS_TWSC_',
+    'Rs': 'Rs_'
+}
 rows = 132
 cols = 193
 features1_size = len(features1_params)
@@ -81,7 +87,7 @@ for year in range(start_date.year, end_date.year + 1):
     start_month = start_date.month if year == start_date.year else 1
     end_month = end_date.month if year == end_date.year else 12
 
-    features1 = []
+    features1 = []  # 存储动态特征
     targets = []
     cur_group = h5.create_group(str(year))
     for month in range(start_month, end_month + 1):
@@ -120,6 +126,10 @@ for year in range(start_date.year, end_date.year + 1):
 
 h5['dem'] = read_img(dem_path).reshape(-1)
 h5['slope'] = read_img(slope_path).reshape(-1)  # 添加slope数据作为特征项
+h5['lon'] = read_img(lon_path).reshape(-1)
+h5['lat'] = read_img(lat_path).reshape(-1)
+if np.isnan(h5['lon']).any() or np.isnan(h5['lat']).any():
+    raise RuntimeWarning("Lon/Lat 存在无效值!")
 h5.flush()
 h5.close()
 h5 = None
@@ -128,7 +138,9 @@ h5 = None
 with h5py.File(h5_path, mode='a') as h5:
     year_dem = h5['dem']
     year_slope = h5['slope']
-    for year in range(2003, 2020):
+    year_lon = h5['lon']
+    year_lat = h5['lat']
+    for year in range(start_date.year, end_date.year + 1):
         year_features1 = h5[r'{}/features1'.format(year)]  # 这里导致的重大错误: year_features1 = h5[r'2003/features1']
         # year_features2 = h5[r'2003/features2']
         year_targets = h5[r'{}/targets'.format(year)]  # Here too
@@ -143,11 +155,15 @@ with h5py.File(h5_path, mode='a') as h5:
             slope = year_slope[mask]
             targets = year_targets[:, mask]
             dem = year_dem[mask]
+            lon = year_lon[mask]
+            lat = year_lat[mask]
         else:
             features1 = np.concatenate((features1, year_features1[:, mask, :]), axis=1)
             slope = np.concatenate((slope, year_slope[mask]), axis=0)
             targets = np.concatenate((targets, year_targets[:, mask]), axis=1)
             dem = np.concatenate((dem, year_dem[mask]), axis=0)
+            lon = np.concatenate((lon, year_lon[mask]), axis=0)
+            lat = np.concatenate((dem, year_lat[mask]), axis=0)
 
     # 归一化
     scaler = StandardScaler()
@@ -155,6 +171,8 @@ with h5py.File(h5_path, mode='a') as h5:
         features1[month, :, :] = scaler.fit_transform(features1[month, :, :])
     dem = scaler.fit_transform(dem.reshape(-1, 1)).ravel()
     slope = scaler.fit_transform(slope.reshape(-1, 1)).ravel()
+    lon = scaler.fit_transform(lon.reshape(-1, 1)).ravel()
+    lat = scaler.fit_transform(lat.reshape(-1, 1)).ravel()
 
     sample_size = dem.shape[0]
     train_amount = int(sample_size * 0.8)
@@ -164,11 +182,15 @@ with h5py.File(r'E:\FeaturesTargets\train.h5', mode='w') as h5:
     h5.create_dataset('dynamic_features', data=features1[:, :train_amount, :])
     h5.create_dataset('static_features1', data=slope[:train_amount])  # 静态变量
     h5.create_dataset('static_features2', data=dem[:train_amount])  # 静态变量
+    h5.create_dataset('static_features3', data=lon[:train_amount])  # 静态变量
+    h5.create_dataset('static_features4', data=lat[:train_amount])  # 静态变量
     h5.create_dataset('targets', data=targets[:, :train_amount])
 with h5py.File(r'E:\FeaturesTargets\eval.h5', mode='w') as h5:
 # # # 创建数据集并存储评估数据
     h5.create_dataset('dynamic_features', data=features1[:, train_amount:, :])
     h5.create_dataset('static_features1', data=slope[train_amount:])  # 静态变量
     h5.create_dataset('static_features2', data=dem[train_amount:])  # 静态变量
+    h5.create_dataset('static_features3', data=lon[train_amount:])  # 静态变量
+    h5.create_dataset('static_features4', data=lat[train_amount:])  # 静态变量
     h5.create_dataset('targets', data=targets[:, train_amount:])
 

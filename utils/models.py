@@ -100,7 +100,7 @@ class LSTMModel(nn.Module):
         """
         super().__init__()
         self.causal_conv1d = nn.Conv1d(input_size, 128, 5)
-        self.fc1 = nn.Linear(2, 128)
+        self.fc1 = nn.Linear(4, 128)
         self.rnn = nn.LSTM(128, hidden_size, num_layers, batch_first=True)
         self.fc2 = nn.Linear(384, output_size)
 
@@ -114,7 +114,7 @@ class LSTMModel(nn.Module):
         # 只使用最后一个时间步的输出
         lstm_out = lstm_out[:, -1, :]  # (-1, 256)
         static_out = self.fc1(static_x)  # (-1, 2) ==> (-1, 128)
-        # static_out = self.fc1(static_x)  # (-1, 2) ==> (-1, 128)
+        # static_out = self.fc1(static_x)  # (-1, 2) ==> (-1, 128)  2024/5/11: 静态特征由2变为4, 新增Lon、Lat
         merged_out = torch.cat([lstm_out, static_out], dim=1)  # (-1, 256 + 128)
         # 全连接层
         out = self.fc2(merged_out)  # (-1, 12)

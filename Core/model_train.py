@@ -4,6 +4,8 @@
 
 """
 This script is used to 构建lstm模型并训练
+
+2024/5/11 增加Rs、Lon、Lat输入到模型中训练
 """
 
 import random
@@ -43,15 +45,18 @@ dynamic_features_name = [
     'ET',
     'Qs',
     'Qsb',
-    'TWSC'
+    'TWSC',
+    'Rs'
 ]
 static_feature_name = [
     'Slope',
-    'DEM'
+    'DEM',
+    'Lon',
+    'Lat'
 ]
 # 创建LSTM模型实例并移至GPU
-model = LSTMModel(6, 256, 4, 12).to('cuda' if torch.cuda.is_available() else 'cpu')
-summary(model, input_data=[(12, 6), (2,)])
+model = LSTMModel(7, 256, 4, 12).to('cuda' if torch.cuda.is_available() else 'cpu')
+summary(model, input_data=[(12, 7), (4,)])
 batch_size = 256
 
 # generator = torch.Generator().manual_seed(42)  # 指定随机种子
@@ -72,7 +77,7 @@ model.train()  # 切换为训练模式
 def model_train(data_loader, feature_ix: int = None, epochs_num: int = 25, dynamic: bool = True,
                 save_path: str = None, device='cuda'):
     # 创建新的模型实例
-    model = LSTMModel(6, 256, 4, 12).to(device)
+    model = LSTMModel(7, 256, 4, 12).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0005)  # 初始学习率设置为0.001
     epochs_loss = []
     for epoch in range(epochs_num):
@@ -115,7 +120,7 @@ def model_train(data_loader, feature_ix: int = None, epochs_num: int = 25, dynam
 
 def model_eval_whole(model_path: str, data_loader, device='cuda'):
     # 加载模型
-    model = LSTMModel(6, 256, 4, 12).to(device)
+    model = LSTMModel(7, 256, 4, 12).to(device)
     model.load_state_dict(torch.load(model_path))
 
     # 评估
@@ -166,7 +171,7 @@ def model_eval_whole(model_path: str, data_loader, device='cuda'):
 
 def model_eval(model_path: str, data_loader, device='cuda'):
     # 加载模型
-    model = LSTMModel(6, 256, 4, 12).to(device)
+    model = LSTMModel(7, 256, 4, 12).to(device)
     model.load_state_dict(torch.load(model_path))
 
     # 评估
@@ -208,7 +213,7 @@ if __name__ == '__main__':
     print('>>> 常规训练结束')
     # 特征重要性训练
     # 动态特征
-    for feature_ix in range(6):
+    for feature_ix in range(7):
         train_dataset = H5DatasetDecoder(train_path, shuffle_feature_ix=feature_ix, dynamic=True)  # 创建自定义数据集实例
         train_data_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 

@@ -166,6 +166,8 @@ pip install -r I:\PyProJect\Veg\VEG\requirements.txt
 
 # 2024年05月09日处理
 
-处理Rs地表太阳辐射数据, 主要是各个月份的影像nc转tiff,顺便做了一下掩膜、裁剪和重采样
+新增process_Rs.py文件, 用于处理Rs地表太阳辐射数据, 主要是各个月份的影像nc转tiff,顺便做了一下掩膜、裁剪和重采样
 并输出了lon和lat数据集为tiff文件, 方便后续作为变量输入到模型中
 
+# 2024/5/11处理
+完善feature_engineering.py文件, 新增关于Rs(dynamic)、lon(static)、lat(static)的特征输入

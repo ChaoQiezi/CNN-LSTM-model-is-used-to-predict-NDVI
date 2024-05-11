@@ -28,6 +28,8 @@ class H5DatasetDecoder(Dataset):
             self.dynamic_features = h5['dynamic_features'][:]  #  (12, 138488, 6)
             self.static_features1 = h5['static_features1'][:]  #  (138488,)
             self.static_features2 = h5['static_features2'][:]  #  (138488,)
+            self.static_features3 = h5['static_features3'][:]  #  (138488,)
+            self.static_features4 = h5['static_features4'][:]  #  (138488,)
 
             if self.shuffle_feature_ix is not None:
                 shuffled_indices = torch.randperm(self.length)
@@ -39,6 +41,10 @@ class H5DatasetDecoder(Dataset):
                     self.static_features1 = self.static_features1[shuffled_indices]
                 elif self.shuffle_feature_ix == 1:
                     self.static_features2 = self.static_features2[shuffled_indices]
+                elif self.shuffle_feature_ix == 2:
+                    self.static_features3 = self.static_features3[shuffled_indices]
+                elif self.shuffle_feature_ix == 3:
+                    self.static_features4 = self.static_features4[shuffled_indices]
 
 
     def __len__(self):
@@ -59,9 +65,11 @@ class H5DatasetDecoder(Dataset):
         dynamic_feature = self.dynamic_features[:, index, :]
         static_features1 = self.static_features1[index]
         static_features2 = self.static_features2[index]
-        target = self                .targets[:, index]
+        static_features3 = self.static_features3[index]
+        static_features4 = self.static_features4[index]
+        target = self.targets[:, index]
 
-        static_feature = (static_features1, static_features2)
+        static_feature = (static_features1, static_features2, static_features3, static_features4)
         return torch.tensor(dynamic_feature, dtype=torch.float32), \
             torch.tensor(static_feature, dtype=torch.float32), torch.tensor(target, dtype=torch.float32)
 
