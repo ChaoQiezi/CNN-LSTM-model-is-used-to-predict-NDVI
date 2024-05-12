@@ -80,7 +80,6 @@ rows = 132
 cols = 193
 features1_size = len(features1_params)
 
-
 # 特征处理和写入
 h5 = h5py.File(h5_path, mode='w')
 for year in range(start_date.year, end_date.year + 1):
@@ -186,11 +185,10 @@ with h5py.File(r'E:\FeaturesTargets\train.h5', mode='w') as h5:
     h5.create_dataset('static_features4', data=lat[:train_amount])  # 静态变量
     h5.create_dataset('targets', data=targets[:, :train_amount])
 with h5py.File(r'E:\FeaturesTargets\eval.h5', mode='w') as h5:
-# # # 创建数据集并存储评估数据
+    # # # 创建数据集并存储评估数据
     h5.create_dataset('dynamic_features', data=features1[:, train_amount:, :])
     h5.create_dataset('static_features1', data=slope[train_amount:])  # 静态变量
     h5.create_dataset('static_features2', data=dem[train_amount:])  # 静态变量
     h5.create_dataset('static_features3', data=lon[train_amount:])  # 静态变量
     h5.create_dataset('static_features4', data=lat[train_amount:])  # 静态变量
     h5.create_dataset('targets', data=targets[:, train_amount:])
-

@@ -74,8 +74,7 @@ epochs_num = 30
 model.train()  # 切换为训练模式
 
 
-def model_train(data_loader, feature_ix: int = None, epochs_num: int = 25, dynamic: bool = True,
-                save_path: str = None, device='cuda'):
+def model_train(data_loader, epochs_num: int = 25,save_path: str = None, device='cuda'):
     # 创建新的模型实例
     model = LSTMModel(7, 256, 4, 12).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0005)  # 初始学习率设置为0.001
@@ -220,17 +219,17 @@ if __name__ == '__main__':
         cur_feature_name = dynamic_features_name[feature_ix]
         save_path = os.path.join(out_model_dir, cur_feature_name + '_model.pth')
         df[cur_feature_name + '_epochs_loss'] = \
-            model_train(train_data_loader, feature_ix, dynamic=True, save_path=save_path)
+            model_train(train_data_loader, save_path=save_path)
         print('>>> {}乱序排列 训练结束'.format(cur_feature_name))
     # 静态特征
-    for feature_ix in range(2):
+    for feature_ix in range(4):
         train_dataset = H5DatasetDecoder(train_path, shuffle_feature_ix=feature_ix, dynamic=False)  # 创建自定义数据集实例
         train_data_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
         cur_feature_name = static_feature_name[feature_ix]
         save_path = os.path.join(out_model_dir, cur_feature_name + '_model.pth')
         df[cur_feature_name + '_epochs_loss'] = \
-            model_train(train_data_loader, feature_ix, dynamic=False, save_path=save_path)
+            model_train(train_data_loader, save_path=save_path)
         print('>>> {}乱序排列 训练结束'.format(cur_feature_name))
     df.to_excel(r'E:\Models\training_eval_results\training_loss.xlsx')
 
