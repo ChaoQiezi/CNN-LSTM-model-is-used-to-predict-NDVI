@@ -27,6 +27,8 @@ dem: single
 
 2024/5/11 新增关于Rs地表太阳辐射和经纬度数据集的添加
 由于Rs时间范围为1983-2017年6月份, 因此此处公共部分的使用日期缩短到2016年12月份.
+
+2024/5/11 仅使用LST,PRCP,ET,RS四个变量进行特征构建
 """
 
 from datetime import datetime
@@ -71,9 +73,9 @@ features1_params = {
     # 'LST_MEAN': 'LST_MEAN_',
     'PRCP': 'GLDAS_PRCP_',
     'ET': 'GLDAS_ET_',
-    'Qs': 'GLDAS_Qs_',
-    'Qsb': 'GLDAS_Qsb_',
-    'TWSC': 'GLDAS_TWSC_',
+    # 'Qs': 'GLDAS_Qs_',
+    # 'Qsb': 'GLDAS_Qsb_',
+    # 'TWSC': 'GLDAS_TWSC_',
     'Rs': 'Rs_'
 }
 rows = 132
@@ -179,16 +181,16 @@ with h5py.File(h5_path, mode='a') as h5:
 # 创建数据集并存储训练数据
 with h5py.File(r'E:\FeaturesTargets\train.h5', mode='w') as h5:
     h5.create_dataset('dynamic_features', data=features1[:, :train_amount, :])
-    h5.create_dataset('static_features1', data=slope[:train_amount])  # 静态变量
-    h5.create_dataset('static_features2', data=dem[:train_amount])  # 静态变量
-    h5.create_dataset('static_features3', data=lon[:train_amount])  # 静态变量
-    h5.create_dataset('static_features4', data=lat[:train_amount])  # 静态变量
+    # h5.create_dataset('static_features1', data=slope[:train_amount])  # 静态变量
+    # h5.create_dataset('static_features2', data=dem[:train_amount])  # 静态变量
+    # h5.create_dataset('static_features3', data=lon[:train_amount])  # 静态变量
+    # h5.create_dataset('static_features4', data=lat[:train_amount])  # 静态变量
     h5.create_dataset('targets', data=targets[:, :train_amount])
 with h5py.File(r'E:\FeaturesTargets\eval.h5', mode='w') as h5:
     # # # 创建数据集并存储评估数据
     h5.create_dataset('dynamic_features', data=features1[:, train_amount:, :])
-    h5.create_dataset('static_features1', data=slope[train_amount:])  # 静态变量
-    h5.create_dataset('static_features2', data=dem[train_amount:])  # 静态变量
-    h5.create_dataset('static_features3', data=lon[train_amount:])  # 静态变量
-    h5.create_dataset('static_features4', data=lat[train_amount:])  # 静态变量
+    # h5.create_dataset('static_features1', data=slope[train_amount:])  # 静态变量
+    # h5.create_dataset('static_features2', data=dem[train_amount:])  # 静态变量
+    # h5.create_dataset('static_features3', data=lon[train_amount:])  # 静态变量
+    # h5.create_dataset('static_features4', data=lat[train_amount:])  # 静态变量
     h5.create_dataset('targets', data=targets[:, train_amount:])

@@ -18,7 +18,7 @@ import pandas as pd
 import torch
 from torchsummary import summary
 from torch.utils.data import DataLoader, random_split
-from VEG.utils.utils import H5DatasetDecoder, cal_r2, H5DynamicDatasetDecoder
+from VEG.utils.utils import cal_r2, H5DynamicDatasetDecoder
 from VEG.utils.models import LSTMModel, LSTMModelDynamic
 from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
 
@@ -80,29 +80,17 @@ model.train()  # 切换为训练模式
 
 def model_train(data_loader, epochs_num: int = 25,save_path: str = None, device='cuda'):
     # 创建新的模型实例
-    model = LSTMModel(7, 256, 4, 12).to(device)
+    model = LSTMModelDynamic(4, 256, 4, 12).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0005)  # 初始学习率设置为0.001
     epochs_loss = []
     for epoch in range(epochs_num):
         train_loss = []
-        for dynamic_inputs, static_inputs, targets in data_loader:
-            # if feature_ix is not None:
-            #     if dynamic:
-            #         batch_size, _, _ = dynamic_inputs.shape
-            #         shuffled_indices = torch.randperm(batch_size)
-            #         # dynamic_inputs[:, :, feature_ix] = torch.tensor(np.random.permutation(dynamic_inputs[:, :, feature_ix]))
-            #         dynamic_inputs[:, :, feature_ix] = torch.tensor(dynamic_inputs[shuffled_indices, :, feature_ix])
-            #     else:
-            #         batch_size, _ = static_inputs.shape
-            #         shuffled_indices = torch.randperm(batch_size)
-            #         # static_inputs[:, feature_ix] = torch.tensor(np.random.permutation(static_inputs[shuffled_indices, feature_ix]))
-            #         static_inputs[:, feature_ix] = torch.tensor(static_inputs[shuffled_indices, feature_ix])
-            dynamic_inputs, static_inputs, targets = dynamic_inputs.to(device), static_inputs.to(device), targets.to(
-                device)
+        for dynamic_inputs, targets in data_loader:
+            dynamic_inputs, targets = dynamic_inputs.to(device), targets.to(device)
 
             """正常"""
             # 前向传播
-            outputs = model(dynamic_inputs, static_inputs)
+            outputs = model(dynamic_inputs)
             # 计算损失
             loss = criterion(outputs, targets)
             # 反向传播和优化
@@ -123,7 +111,7 @@ def model_train(data_loader, epochs_num: int = 25,save_path: str = None, device=
 
 def model_eval_whole(model_path: str, data_loader, device='cuda'):
     # 加载模型
-    model = LSTMModel(7, 256, 4, 12).to(device)
+    model = LSTMModelDynamic(4, 256, 4, 12).to(device)
     model.load_state_dict(torch.load(model_path))
 
     # 评估
@@ -131,10 +119,9 @@ def model_eval_whole(model_path: str, data_loader, device='cuda'):
     all_outputs = []
     all_targets = []
     with torch.no_grad():
-        for dynamic_inputs, static_inputs, targets in data_loader:
-            dynamic_inputs, static_inputs, targets = dynamic_inputs.to(device), static_inputs.to(device), targets.to(
-                device)
-            outputs = model(dynamic_inputs, static_inputs)
+        for dynamic_inputs, targets in data_loader:
+            dynamic_inputs, targets = dynamic_inputs.to(device), targets.to(device)
+            outputs = model(dynamic_inputs)
             all_outputs.append(outputs.cpu())  # outputs/targets: (batch_size, time_steps)
             all_targets.append(targets.cpu())
 
@@ -174,7 +161,7 @@ def model_eval_whole(model_path: str, data_loader, device='cuda'):
 
 def model_eval(model_path: str, data_loader, device='cuda'):
     # 加载模型
-    model = LSTMModel(7, 256, 4, 12).to(device)
+    model = LSTMModelDynamic(4, 256, 4, 12).to(device)
     model.load_state_dict(torch.load(model_path))
 
     # 评估
@@ -182,10 +169,9 @@ def model_eval(model_path: str, data_loader, device='cuda'):
     all_outputs = []
     all_targets = []
     with torch.no_grad():
-        for dynamic_inputs, static_inputs, targets in data_loader:
-            dynamic_inputs, static_inputs, targets = dynamic_inputs.to(device), static_inputs.to(device), targets.to(
-                device)
-            outputs = model(dynamic_inputs, static_inputs)
+        for dynamic_inputs, targets in data_loader:
+            dynamic_inputs, targets = dynamic_inputs.to(device), targets.to(device)
+            outputs = model(dynamic_inputs)
             all_outputs.append(outputs.cpu())  # outputs/targets: (batch_size, time_steps)
             all_targets.append(targets.cpu())
 
@@ -212,37 +198,38 @@ def model_eval(model_path: str, data_loader, device='cuda'):
 if __name__ == '__main__':
     df = pd.DataFrame()
     # 常规训练
-    df['normal_epochs_loss'] = model_train(train_data_loader, save_path=os.path.join(out_model_dir, 'normal_model.pth'))
+    df['normal_epochs_loss'] = model_train(train_data_loader, save_path=os.path.join(out_model_dir,
+                                                                                     'normal_model_dynamic.pth'))
     print('>>> 常规训练结束')
     # 特征重要性训练
     # 动态特征
-    for feature_ix in range(7):
-        train_dataset = H5DatasetDecoder(train_path, shuffle_feature_ix=feature_ix, dynamic=True)  # 创建自定义数据集实例
+    for feature_ix in range(4):
+        train_dataset = H5DynamicDatasetDecoder(train_path, shuffle_feature_ix=feature_ix, dynamic=True)  # 创建自定义数据集实例
         train_data_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
         cur_feature_name = dynamic_features_name[feature_ix]
-        save_path = os.path.join(out_model_dir, cur_feature_name + '_model.pth')
+        save_path = os.path.join(out_model_dir, cur_feature_name + '_model_dynamic.pth')
         df[cur_feature_name + '_epochs_loss'] = \
             model_train(train_data_loader, save_path=save_path)
         print('>>> {}乱序排列 训练结束'.format(cur_feature_name))
-    # 静态特征
-    for feature_ix in range(4):
-        train_dataset = H5DatasetDecoder(train_path, shuffle_feature_ix=feature_ix, dynamic=False)  # 创建自定义数据集实例
-        train_data_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-
-        cur_feature_name = static_feature_name[feature_ix]
-        save_path = os.path.join(out_model_dir, cur_feature_name + '_model.pth')
-        df[cur_feature_name + '_epochs_loss'] = \
-            model_train(train_data_loader, save_path=save_path)
-        print('>>> {}乱序排列 训练结束'.format(cur_feature_name))
-    df.to_excel(r'E:\Models\training_eval_results\training_loss.xlsx')
+    # # 静态特征
+    # for feature_ix in range(4):
+    #     train_dataset = H5DatasetDecoder(train_path, shuffle_feature_ix=feature_ix, dynamic=False)  # 创建自定义数据集实例
+    #     train_data_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    #
+    #     cur_feature_name = static_feature_name[feature_ix]
+    #     save_path = os.path.join(out_model_dir, cur_feature_name + '_model.pth')
+    #     df[cur_feature_name + '_epochs_loss'] = \
+    #         model_train(train_data_loader, save_path=save_path)
+    #     print('>>> {}乱序排列 训练结束'.format(cur_feature_name))
+    df.to_excel(r'E:\Models\training_eval_results\training_loss_dynamic.xlsx')
 
     # 评估
     indicator_whole = pd.DataFrame()
     indicator = pd.DataFrame()
-    model_paths = glob.glob(os.path.join(out_model_dir, '*.pth'))
+    model_paths = glob.glob(os.path.join(out_model_dir, '*_model_dynamic.pth'))
     for model_path in model_paths:
-        cur_model_name = os.path.basename(model_path).rsplit('_model')[0]
+        cur_model_name = os.path.basename(model_path).split('_model')[0]
         mse_step, mae_step, r2_step, rmse_step = model_eval_whole(model_path, eval_data_loader)
         indicator_whole[cur_model_name + '_evaluate_mse'] = [mse_step]
         indicator_whole[cur_model_name + '_evaluate_mae'] = [mae_step]
@@ -258,11 +245,11 @@ if __name__ == '__main__':
         indicator[cur_model_name + '_evaluate_mae'] = mae_per_step
         indicator[cur_model_name + '_evaluate_r2'] = r2_per_step
         indicator[cur_model_name + '_evaluate_rmse'] = rmse_per_step
-        outputs_targets.to_excel(r'E:\Models\training_eval_results\{}_outputs_targets.xlsx'.format(cur_model_name))
+        outputs_targets.to_excel(r'E:\Models\training_eval_results\{}_outputs_targets_dynamic.xlsx'.format(cur_model_name))
         print('>>> {} 重要性评估完毕'.format(cur_model_name))
     indicator.loc['均值指标'] = np.mean(indicator, axis=0)
-    indicator.to_excel(r'E:\Models\training_eval_results\eval_indicators.xlsx')
-    indicator_whole.to_excel(r'E:\Models\training_eval_results\eval_indicators_整体.xlsx')
+    indicator.to_excel(r'E:\Models\training_eval_results\eval_indicators_dynamic.xlsx')
+    indicator_whole.to_excel(r'E:\Models\training_eval_results\eval_indicators_整体_dynamic.xlsx')
     # model.eval()
     # eval_loss = []
     # with torch.no_grad():
