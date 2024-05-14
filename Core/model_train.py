@@ -18,7 +18,7 @@ import pandas as pd
 import torch
 from torchsummary import summary
 from torch.utils.data import DataLoader, random_split
-from VEG.utils.utils import H5DatasetDecoder, cal_r2, H5DynamicDatasetDecoder
+from VEG.utils.utils import H5DatasetDecoder, cal_r2
 from VEG.utils.models import LSTMModel, LSTMModelDynamic
 from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
 
@@ -57,18 +57,18 @@ static_feature_name = [
     'Lat'
 ]
 # 创建LSTM模型实例并移至GPU
-# model = LSTMModel(4, 256, 4, 12).to('cuda' if torch.cuda.is_available() else 'cpu')
-# summary(model, input_data=[(12, 7), (4,)])
-model = LSTMModelDynamic(4, 256, 4, 12).to('cuda' if torch.cuda.is_available() else 'cpu')
-summary(model, input_data=[(12, 4)])
+model = LSTMModel(4, 256, 4, 12).to('cuda' if torch.cuda.is_available() else 'cpu')
+summary(model, input_data=[(12, 4), (4,)])
+# model = LSTMModelDynamic(4, 256, 4, 12).to('cuda' if torch.cuda.is_available() else 'cpu')
+# summary(model, input_data=[(12, 4)])
 batch_size = 256
 
 # generator = torch.Generator().manual_seed(42)  # 指定随机种子
 # train_dataset, eval_dataset, sample_dataset = random_split(dataset, (0.8, 0.195, 0.005), generator=generator)
 # train_dataset, eval_dataset = random_split(dataset, (0.8, 0.2), generator=generator)
 # 创建数据加载器
-train_dataset = H5DynamicDatasetDecoder(train_path)  # 创建自定义数据集实例
-eval_dataset = H5DynamicDatasetDecoder(eval_path)
+train_dataset = H5DatasetDecoder(train_path)  # 创建自定义数据集实例
+eval_dataset = H5DatasetDecoder(eval_path)
 train_data_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 eval_data_loader = DataLoader(eval_dataset, batch_size=batch_size, shuffle=True)
 # 训练参数
@@ -78,9 +78,9 @@ epochs_num = 30
 model.train()  # 切换为训练模式
 
 
-def model_train(data_loader, epochs_num: int = 25,save_path: str = None, device='cuda'):
+def model_train(data_loader, epochs_num: int = 25, save_path: str = None, device='cuda'):
     # 创建新的模型实例
-    model = LSTMModel(7, 256, 4, 12).to(device)
+    model = LSTMModel(4, 256, 4, 12).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0005)  # 初始学习率设置为0.001
     epochs_loss = []
     for epoch in range(epochs_num):
@@ -123,7 +123,7 @@ def model_train(data_loader, epochs_num: int = 25,save_path: str = None, device=
 
 def model_eval_whole(model_path: str, data_loader, device='cuda'):
     # 加载模型
-    model = LSTMModel(7, 256, 4, 12).to(device)
+    model = LSTMModel(4, 256, 4, 12).to(device)
     model.load_state_dict(torch.load(model_path))
 
     # 评估
@@ -174,7 +174,7 @@ def model_eval_whole(model_path: str, data_loader, device='cuda'):
 
 def model_eval(model_path: str, data_loader, device='cuda'):
     # 加载模型
-    model = LSTMModel(7, 256, 4, 12).to(device)
+    model = LSTMModel(4, 256, 4, 12).to(device)
     model.load_state_dict(torch.load(model_path))
 
     # 评估
@@ -212,16 +212,16 @@ def model_eval(model_path: str, data_loader, device='cuda'):
 if __name__ == '__main__':
     df = pd.DataFrame()
     # 常规训练
-    df['normal_epochs_loss'] = model_train(train_data_loader, save_path=os.path.join(out_model_dir, 'normal_model.pth'))
+    df['normal_epochs_loss'] = model_train(train_data_loader, save_path=os.path.join(out_model_dir, 'normal_model_V07.pth'))
     print('>>> 常规训练结束')
     # 特征重要性训练
     # 动态特征
-    for feature_ix in range(7):
+    for feature_ix in range(4):
         train_dataset = H5DatasetDecoder(train_path, shuffle_feature_ix=feature_ix, dynamic=True)  # 创建自定义数据集实例
         train_data_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
         cur_feature_name = dynamic_features_name[feature_ix]
-        save_path = os.path.join(out_model_dir, cur_feature_name + '_model.pth')
+        save_path = os.path.join(out_model_dir, cur_feature_name + '_model_V07.pth')
         df[cur_feature_name + '_epochs_loss'] = \
             model_train(train_data_loader, save_path=save_path)
         print('>>> {}乱序排列 训练结束'.format(cur_feature_name))
@@ -231,16 +231,16 @@ if __name__ == '__main__':
         train_data_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
         cur_feature_name = static_feature_name[feature_ix]
-        save_path = os.path.join(out_model_dir, cur_feature_name + '_model.pth')
+        save_path = os.path.join(out_model_dir, cur_feature_name + '_model_V07.pth')
         df[cur_feature_name + '_epochs_loss'] = \
             model_train(train_data_loader, save_path=save_path)
         print('>>> {}乱序排列 训练结束'.format(cur_feature_name))
-    df.to_excel(r'E:\Models\training_eval_results\training_loss.xlsx')
+    df.to_excel(r'E:\Models\training_eval_results\training_loss_V07.xlsx')
 
     # 评估
     indicator_whole = pd.DataFrame()
     indicator = pd.DataFrame()
-    model_paths = glob.glob(os.path.join(out_model_dir, '*.pth'))
+    model_paths = glob.glob(os.path.join(out_model_dir, '*_model_V07.pth'))
     for model_path in model_paths:
         cur_model_name = os.path.basename(model_path).rsplit('_model')[0]
         mse_step, mae_step, r2_step, rmse_step = model_eval_whole(model_path, eval_data_loader)
@@ -258,11 +258,11 @@ if __name__ == '__main__':
         indicator[cur_model_name + '_evaluate_mae'] = mae_per_step
         indicator[cur_model_name + '_evaluate_r2'] = r2_per_step
         indicator[cur_model_name + '_evaluate_rmse'] = rmse_per_step
-        outputs_targets.to_excel(r'E:\Models\training_eval_results\{}_outputs_targets.xlsx'.format(cur_model_name))
+        outputs_targets.to_excel(r'E:\Models\training_eval_results\{}_outputs_targets_V07.xlsx'.format(cur_model_name))
         print('>>> {} 重要性评估完毕'.format(cur_model_name))
     indicator.loc['均值指标'] = np.mean(indicator, axis=0)
-    indicator.to_excel(r'E:\Models\training_eval_results\eval_indicators.xlsx')
-    indicator_whole.to_excel(r'E:\Models\training_eval_results\eval_indicators_整体.xlsx')
+    indicator.to_excel(r'E:\Models\training_eval_results\eval_indicators_V07.xlsx')
+    indicator_whole.to_excel(r'E:\Models\training_eval_results\eval_indicators_整体_V07.xlsx')
     # model.eval()
     # eval_loss = []
     # with torch.no_grad():
